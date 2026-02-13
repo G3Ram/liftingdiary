@@ -1,4 +1,5 @@
 import { pgTable, uuid, varchar, text, timestamp, integer, decimal, index } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // Workouts table - stores individual workout sessions
 export const workouts = pgTable('workouts', {
@@ -51,4 +52,32 @@ export const sets = pgTable('sets', {
 }, (table) => ({
   workoutExerciseIdIdx: index('sets_workout_exercise_id_idx').on(table.workoutExerciseId),
   workoutExerciseIdSetNumberIdx: index('sets_workout_exercise_id_set_number_idx').on(table.workoutExerciseId, table.setNumber),
+}));
+
+// Relations
+export const workoutsRelations = relations(workouts, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+}));
+
+export const exercisesRelations = relations(exercises, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+}));
+
+export const workoutExercisesRelations = relations(workoutExercises, ({ one, many }) => ({
+  workout: one(workouts, {
+    fields: [workoutExercises.workoutId],
+    references: [workouts.id],
+  }),
+  exercise: one(exercises, {
+    fields: [workoutExercises.exerciseId],
+    references: [exercises.id],
+  }),
+  sets: many(sets),
+}));
+
+export const setsRelations = relations(sets, ({ one }) => ({
+  workoutExercise: one(workoutExercises, {
+    fields: [sets.workoutExerciseId],
+    references: [workoutExercises.id],
+  }),
 }));
