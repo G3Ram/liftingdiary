@@ -65,6 +65,17 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
       })
     : workouts
 
+  // Check if selected date is in the past (before today)
+  const isDateInPast = selectedDate
+    ? (() => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const selected = new Date(selectedDate)
+        selected.setHours(0, 0, 0, 0)
+        return selected < today
+      })()
+    : false
+
   // Calculate workout duration in minutes
   const getWorkoutDuration = (workout: Workout): number => {
     if (!workout.completedAt) return 0
@@ -176,45 +187,61 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground mb-4">
-                    No workouts logged for this date
-                  </p>
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>Start New Workout</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Create New Workout</DialogTitle>
-                        <DialogDescription>
-                          Start a new workout for {selectedDate ? format(selectedDate, 'do MMM yyyy') : 'this date'}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form action={handleCreateWorkout}>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="name">Workout Name (Optional)</Label>
-                            <Input
-                              id="name"
-                              name="name"
-                              placeholder="e.g., Upper Body Push"
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                          <input
-                            type="hidden"
-                            name="date"
-                            value={selectedDate?.toISOString() || new Date().toISOString()}
-                          />
-                        </div>
-                        <DialogFooter>
-                          <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Creating...' : 'Create Workout'}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  {isDateInPast ? (
+                    // Show playful message for past dates with no data
+                    <div>
+                      <p className="text-2xl mb-2">🦴</p>
+                      <p className="text-muted-foreground mb-1">
+                        No workouts logged for this date
+                      </p>
+                      <p className="text-sm text-muted-foreground/70">
+                        Looks like this was a rest day! 💤
+                      </p>
+                    </div>
+                  ) : (
+                    // Show "Start New Workout" button for today and future dates
+                    <>
+                      <p className="text-muted-foreground mb-4">
+                        No workouts logged for this date
+                      </p>
+                      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button>Start New Workout</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Workout</DialogTitle>
+                            <DialogDescription>
+                              Start a new workout for {selectedDate ? format(selectedDate, 'do MMM yyyy') : 'this date'}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <form action={handleCreateWorkout}>
+                            <div className="grid gap-4 py-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="name">Workout Name (Optional)</Label>
+                                <Input
+                                  id="name"
+                                  name="name"
+                                  placeholder="e.g., Upper Body Push"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <input
+                                type="hidden"
+                                name="date"
+                                value={selectedDate?.toISOString() || new Date().toISOString()}
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? 'Creating...' : 'Create Workout'}
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}
