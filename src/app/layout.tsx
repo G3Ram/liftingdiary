@@ -41,8 +41,8 @@ export default function RootLayout({
               <h1 className="text-xl font-semibold">Lifting Diary</h1>
               <div className="flex items-center gap-4">
                 <SignedOut>
-                  <SignInButton />
-                  <SignUpButton />
+                  <SignInButton mode="modal" />
+                  <SignUpButton mode="modal" />
                 </SignedOut>
                 <SignedIn>
                   <UserButton />
