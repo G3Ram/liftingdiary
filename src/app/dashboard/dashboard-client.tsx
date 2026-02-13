@@ -4,6 +4,19 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { createWorkoutAction } from './actions'
 
 // Type definitions matching our database schema
 interface WorkoutSet {
@@ -37,6 +50,8 @@ interface DashboardClientProps {
 
 export function DashboardClient({ workouts }: DashboardClientProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Filter workouts by selected date
   const filteredWorkouts = selectedDate
@@ -56,6 +71,19 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
     const start = new Date(workout.startedAt).getTime()
     const end = new Date(workout.completedAt).getTime()
     return Math.round((end - start) / 1000 / 60)
+  }
+
+  // Handle workout creation
+  const handleCreateWorkout = async (formData: FormData) => {
+    setIsSubmitting(true)
+    try {
+      await createWorkoutAction(formData)
+      setIsDialogOpen(false)
+    } catch (error) {
+      console.error('Failed to create workout:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -148,9 +176,45 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-4">
                     No workouts logged for this date
                   </p>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>Start New Workout</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create New Workout</DialogTitle>
+                        <DialogDescription>
+                          Start a new workout for {selectedDate ? format(selectedDate, 'do MMM yyyy') : 'this date'}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form action={handleCreateWorkout}>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="name">Workout Name (Optional)</Label>
+                            <Input
+                              id="name"
+                              name="name"
+                              placeholder="e.g., Upper Body Push"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                          <input
+                            type="hidden"
+                            name="date"
+                            value={selectedDate?.toISOString() || new Date().toISOString()}
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Creating...' : 'Create Workout'}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </CardContent>
               </Card>
             )}
