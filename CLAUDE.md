@@ -20,6 +20,8 @@ This is a Next.js 16 application called "liftingdiary" built with:
 
 All code generated must strictly adhere to the standards and patterns documented in these files. Do not proceed with code generation without first reviewing the appropriate documentation.
 
+- /docs/ui.md
+
 ## Development Commands
 
 ```bash
