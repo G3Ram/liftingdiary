@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, decimal, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, integer, decimal, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Workouts table - stores individual workout sessions
