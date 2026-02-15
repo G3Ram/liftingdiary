@@ -182,6 +182,7 @@ src/
 - Not calling `revalidatePath()` after mutations
 - Returning `any` type
 - Exposing raw database errors to client
+- Using `redirect()` within Server Actions (handle navigation client-side instead)
 
 ### Server Action Examples
 
@@ -608,7 +609,157 @@ export function DeleteWorkoutButton({ workoutId }: { workoutId: string }) {
 }
 ```
 
-## 5. Security Requirements
+## 5. Navigation and Redirects
+
+### Required Pattern
+
+**CRITICAL**: Server Actions MUST NOT use the `redirect()` function. All navigation must be handled client-side after the Server Action resolves.
+
+#### ✅ REQUIRED
+- Server Actions return success/error results
+- Client components handle navigation using `useRouter()` from `next/navigation`
+- Navigation happens after Server Action completes successfully
+- Loading states managed on the client during action execution
+
+#### ❌ FORBIDDEN
+- Using `redirect()` inside Server Actions
+- Using `redirect()` from `next/navigation` in actions
+- Any navigation logic within Server Actions
+
+### Rationale
+
+1. **Separation of Concerns**: Server Actions handle data mutations; client handles navigation
+2. **Better UX**: Client can show loading states during the action
+3. **Error Handling**: Client can handle errors before navigating
+4. **Type Safety**: Return values can be properly typed and checked
+5. **Flexibility**: Client has full control over when/where to navigate
+
+### Examples
+
+```typescript
+// ❌ WRONG - Using redirect in Server Action
+'use server';
+
+import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
+import { createWorkout } from '@/data/workouts';
+
+export async function createWorkoutAction(input: any) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect('/sign-in'); // WRONG: Don't redirect in Server Action
+  }
+
+  const workout = await createWorkout(input, userId);
+
+  redirect('/dashboard'); // WRONG: Don't redirect in Server Action
+}
+
+// ✅ CORRECT - Return result, handle navigation client-side
+'use server';
+
+import { auth } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
+import { createWorkout } from '@/data/workouts';
+
+export async function createWorkoutAction(input: any) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: 'Unauthorized' }; // Return error
+  }
+
+  try {
+    const workout = await createWorkout(input, userId);
+    revalidatePath('/dashboard');
+    return { success: true, workout }; // Return success
+  } catch (error) {
+    return { success: false, error: 'Failed to create workout' };
+  }
+}
+```
+
+### Client-Side Navigation Pattern
+
+```typescript
+// ✅ CORRECT - Client Component handles navigation
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createWorkoutAction } from './actions';
+import { Button } from '@/components/ui/button';
+
+export function CreateWorkoutForm() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const input = {
+      name: formData.get('name') as string,
+      date: new Date(formData.get('date') as string),
+    };
+
+    // Call Server Action
+    const result = await createWorkoutAction(input);
+
+    setLoading(false);
+
+    if (!result.success) {
+      // Handle error - stay on page, show error
+      setError(result.error);
+      return;
+    }
+
+    // Handle success - navigate to dashboard
+    router.push('/dashboard');
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
+      {error && <div className="text-red-500">{error}</div>}
+      <Button type="submit" disabled={loading}>
+        {loading ? 'Creating...' : 'Create'}
+      </Button>
+    </form>
+  );
+}
+```
+
+### Benefits of Client-Side Navigation
+
+1. **Loading States**: Show loading indicators during action execution
+2. **Error Display**: Display errors without navigation
+3. **Conditional Navigation**: Navigate to different pages based on result
+4. **User Feedback**: Provide immediate feedback before navigation
+5. **Better Testing**: Easier to test navigation logic separately
+
+```typescript
+// Example: Conditional navigation based on result
+const result = await createWorkoutAction(input);
+
+if (!result.success) {
+  setError(result.error);
+  return;
+}
+
+// Navigate to different pages based on workout type
+if (result.workout.type === 'quick') {
+  router.push('/dashboard');
+} else {
+  router.push(`/workouts/${result.workout.id}/edit`);
+}
+```
+
+## 6. Security Requirements
 
 ### User Data Isolation
 
@@ -685,7 +836,7 @@ export async function deleteWorkoutAction(workoutId: string) {
 }
 ```
 
-## 6. Error Handling
+## 7. Error Handling
 
 ### Required Pattern
 
@@ -759,7 +910,7 @@ export async function myAction(input: any): Promise<ActionResult<Workout>> {
 }
 ```
 
-## 7. Cache Revalidation
+## 8. Cache Revalidation
 
 ### Required Pattern
 
@@ -999,6 +1150,51 @@ export async function myAction(input: any) {
 }
 ```
 
+### ❌ Using redirect() in Server Actions
+```typescript
+// ❌ WRONG
+'use server';
+
+import { redirect } from 'next/navigation';
+
+export async function myAction(input: any) {
+  const result = await createWorkout(input, userId);
+  redirect('/dashboard'); // WRONG: Don't redirect in Server Action
+}
+
+// ✅ CORRECT - Return result and redirect client-side
+'use server';
+
+export async function myAction(input: any) {
+  try {
+    const result = await createWorkout(input, userId);
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: 'Operation failed' };
+  }
+}
+
+// Client Component
+'use client';
+
+import { useRouter } from 'next/navigation';
+
+export function MyForm() {
+  const router = useRouter();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const result = await myAction(input);
+
+    if (result.success) {
+      router.push('/dashboard'); // CORRECT: Navigate client-side
+    }
+  }
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
 ## Checklist for Data Mutations
 
 Before implementing any data mutation, verify:
@@ -1018,7 +1214,9 @@ Before implementing any data mutation, verify:
 - [ ] Server Action has try-catch error handling
 - [ ] Server Action calls `revalidatePath()` after mutation
 - [ ] Server Action returns typed result (`success`/`error`)
+- [ ] Server Action does NOT use `redirect()` (navigation handled client-side)
 - [ ] Client Component handles loading and error states
+- [ ] Client Component handles navigation using `useRouter()` after action resolves
 
 ## Summary
 
@@ -1030,8 +1228,9 @@ Before implementing any data mutation, verify:
 6. **Zod Validation** - ALL inputs validated with Zod schemas
 7. **Authentication Required** - Check `userId` from `auth()`
 8. **Security First** - Always filter by authenticated `userId`
-9. **Error Handling** - Graceful error handling with typed responses
-10. **Cache Revalidation** - Call `revalidatePath()` after mutations
+9. **No Server-Side Redirects** - Never use `redirect()` in Server Actions; handle navigation client-side
+10. **Error Handling** - Graceful error handling with typed responses
+11. **Cache Revalidation** - Call `revalidatePath()` after mutations
 
 These patterns are **mandatory** and **non-negotiable**. They ensure type safety, input validation, security, and maintainability across all data mutations.
 

@@ -1,22 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { createWorkoutAction } from './actions'
 
 // Type definitions matching our database schema
 interface WorkoutSet {
@@ -50,8 +39,6 @@ interface DashboardClientProps {
 
 export function DashboardClient({ workouts }: DashboardClientProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Filter workouts by selected date
   const filteredWorkouts = selectedDate
@@ -82,19 +69,6 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
     const start = new Date(workout.startedAt).getTime()
     const end = new Date(workout.completedAt).getTime()
     return Math.round((end - start) / 1000 / 60)
-  }
-
-  // Handle workout creation
-  const handleCreateWorkout = async (formData: FormData) => {
-    setIsSubmitting(true)
-    try {
-      await createWorkoutAction(formData)
-      setIsDialogOpen(false)
-    } catch (error) {
-      console.error('Failed to create workout:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
   }
 
   return (
@@ -140,50 +114,62 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
 
           <div className="space-y-4">
             {filteredWorkouts.length > 0 ? (
-              filteredWorkouts.map((workout) => {
-                const duration = getWorkoutDuration(workout)
-                return (
-                  <Card key={workout.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{workout.name || 'Untitled Workout'}</CardTitle>
-                          <CardDescription>
-                            {duration > 0 ? `${duration} minutes • ` : ''}
-                            {format(new Date(workout.startedAt), 'do MMM yyyy')}
-                          </CardDescription>
+              <>
+                {filteredWorkouts.map((workout) => {
+                  const duration = getWorkoutDuration(workout)
+                  return (
+                    <Card key={workout.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle>{workout.name || 'Untitled Workout'}</CardTitle>
+                            <CardDescription>
+                              {duration > 0 ? `${duration} minutes • ` : ''}
+                              {format(new Date(workout.startedAt), 'do MMM yyyy')}
+                            </CardDescription>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {workout.workoutExercises.length} exercise{workout.workoutExercises.length !== 1 ? 's' : ''}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {workout.workoutExercises.length} exercise{workout.workoutExercises.length !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {workout.workoutExercises.map((workoutExercise) => {
-                          const totalSets = workoutExercise.sets.length
-                          const firstSet = workoutExercise.sets[0]
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {workout.workoutExercises.map((workoutExercise) => {
+                            const totalSets = workoutExercise.sets.length
+                            const firstSet = workoutExercise.sets[0]
 
-                          return (
-                            <div
-                              key={workoutExercise.id}
-                              className="flex justify-between items-center p-3 bg-muted/50 rounded-lg"
-                            >
-                              <div className="font-medium">{workoutExercise.exercise.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {totalSets} × {firstSet?.reps || 0} reps
-                                {firstSet?.weight && parseFloat(firstSet.weight) > 0
-                                  ? ` @ ${firstSet.weight} lbs`
-                                  : ''}
+                            return (
+                              <div
+                                key={workoutExercise.id}
+                                className="flex justify-between items-center p-3 bg-muted/50 rounded-lg"
+                              >
+                                <div className="font-medium">{workoutExercise.exercise.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {totalSets} × {firstSet?.reps || 0} reps
+                                  {firstSet?.weight && parseFloat(firstSet.weight) > 0
+                                    ? ` @ ${firstSet.weight} lbs`
+                                    : ''}
+                                </div>
                               </div>
-                            </div>
-                          )
-                        })}
-                      </div>
+                            )
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+                {/* Show "Start New Workout" button for today and future dates even when workouts exist */}
+                {!isDateInPast && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <Link href="/dashboard/workout/new">
+                        <Button>Start New Workout</Button>
+                      </Link>
                     </CardContent>
                   </Card>
-                )
-              })
+                )}
+              </>
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
@@ -204,42 +190,9 @@ export function DashboardClient({ workouts }: DashboardClientProps) {
                       <p className="text-muted-foreground mb-4">
                         No workouts logged for this date
                       </p>
-                      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button>Start New Workout</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Workout</DialogTitle>
-                            <DialogDescription>
-                              Start a new workout for {selectedDate ? format(selectedDate, 'do MMM yyyy') : 'this date'}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <form action={handleCreateWorkout}>
-                            <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="name">Workout Name (Optional)</Label>
-                                <Input
-                                  id="name"
-                                  name="name"
-                                  placeholder="e.g., Upper Body Push"
-                                  disabled={isSubmitting}
-                                />
-                              </div>
-                              <input
-                                type="hidden"
-                                name="date"
-                                value={selectedDate?.toISOString() || new Date().toISOString()}
-                              />
-                            </div>
-                            <DialogFooter>
-                              <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? 'Creating...' : 'Create Workout'}
-                              </Button>
-                            </DialogFooter>
-                          </form>
-                        </DialogContent>
-                      </Dialog>
+                      <Link href="/dashboard/workout/new">
+                        <Button>Start New Workout</Button>
+                      </Link>
                     </>
                   )}
                 </CardContent>

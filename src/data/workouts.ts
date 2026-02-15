@@ -91,3 +91,28 @@ export async function getUserWorkout(workoutId: string, userId: string) {
     },
   });
 }
+
+/**
+ * Create a new workout for a user
+ * @param data - Workout data (name and startedAt)
+ * @param userId - The authenticated user's ID from Clerk
+ * @returns Created workout
+ */
+export async function createWorkout(
+  data: {
+    name: string | null;
+    startedAt: Date;
+  },
+  userId: string
+) {
+  const [workout] = await db
+    .insert(workouts)
+    .values({
+      ...data,
+      userId,
+      completedAt: null,
+    })
+    .returning();
+
+  return workout;
+}
