@@ -16,6 +16,7 @@ This is a Next.js 16 application called "liftingdiary" built with:
 **CRITICAL**: Before generating any code, ALWAYS consult the relevant documentation files in the `/docs` directory first. These files contain:
 - UI standards and guidelines (`ui.md`)
 - Data fetching patterns and security requirements (`data-fetching.md`)
+- Authentication standards and Clerk integration (`auth.md`)
 - Component patterns and best practices
 - Project-specific conventions and requirements
 
@@ -23,6 +24,7 @@ All code generated must strictly adhere to the standards and patterns documented
 
 - /docs/ui.md
 - /docs/data-fetching.md
+- /docs/auth.md
 
 ## Development Commands
 
