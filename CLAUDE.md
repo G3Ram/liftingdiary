@@ -14,6 +14,7 @@ This is a Next.js 16 application called "liftingdiary" built with:
 ## Documentation-First Approach
 
 **CRITICAL**: Before generating any code, ALWAYS consult the relevant documentation files in the `/docs` directory first. These files contain:
+- Routing standards and conventions (`routing.md`)
 - UI standards and guidelines (`ui.md`)
 - Data fetching patterns and security requirements (`data-fetching.md`)
 - Data mutation patterns and validation (`data-mutations.md`)
@@ -24,11 +25,12 @@ This is a Next.js 16 application called "liftingdiary" built with:
 
 All code generated must strictly adhere to the standards and patterns documented in these files. Do not proceed with code generation without first reviewing the appropriate documentation.
 
-- /docs/ui.md
+- /docs/auth.md
 - /docs/data-fetching.md
 - /docs/data-mutations.md
-- /docs/auth.md
+- /docs/routing.md
 - /docs/server-components.md
+- /docs/ui.md
 
 ## Development Commands
 
