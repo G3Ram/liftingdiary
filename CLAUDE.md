@@ -18,6 +18,7 @@ This is a Next.js 16 application called "liftingdiary" built with:
 - Data fetching patterns and security requirements (`data-fetching.md`)
 - Data mutation patterns and validation (`data-mutations.md`)
 - Authentication standards and Clerk integration (`auth.md`)
+- Server Components and Next.js 15+ patterns (`server-components.md`)
 - Component patterns and best practices
 - Project-specific conventions and requirements
 
@@ -27,6 +28,7 @@ All code generated must strictly adhere to the standards and patterns documented
 - /docs/data-fetching.md
 - /docs/data-mutations.md
 - /docs/auth.md
+- /docs/server-components.md
 
 ## Development Commands
 
